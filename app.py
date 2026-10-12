@@ -1,12 +1,40 @@
-from flask import Flask, render_template, request, redirect, session
+from flask import Flask, render_template, request, redirect, session, url_for
 
 from database import createTables, AuthQueries
 import random
 from utils import EmailTemaples, sendEmail
 from utils import generateHashPassword,validateHashPassword
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadTimeSignature # it used to create token and validate token
+
+
 
 app = Flask(__name__)
-app.secret_key = "Srinubabu@1123"
+app.secret_key = "Manusha@21"
+serializer = URLSafeTimedSerializer(app.secret_key)
+
+# generate token
+def generateToken(email:str):
+    token = serializer.dumps(obj=email, salt="reset-password")
+    return token
+
+# validate token
+def validateToken(token):
+    try:
+        data = serializer.loads(token, 
+                                salt="reset-password",
+                                max_age=600) # 10 mins
+        return data
+    except BadTimeSignature:
+        print("URL Time Expired")
+        return redirect('/login')
+    except SignatureExpired:
+        print("Invalid url ")
+        return redirect('/login')
+
+
+
+
+
 
 # home route
 @app.route('/')
@@ -20,6 +48,29 @@ def login():
     if request.method == 'GET':
         return render_template('login.html')
     # Post request
+    if request.method =='POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        status, user = AuthQueries.checkEmailExists(email=email, data=True)
+        if status == False:
+            print(user)
+            return redirect('/login')
+        # match password
+        status = validateHashPassword(password=password,
+                                    hash_password=user['hashpassword'])
+        if status == False:
+            print("Password incorrect")
+            return redirect('/login')
+        # redicte to dash board page
+        session.clear()
+        session['id'] = user ['userid']
+        session['username'] = user['username']
+        return redirect('/dashboard')
+
+
+
+
+
 
 # register 
 @app.route('/register', methods =['GET','POST'])
@@ -65,36 +116,114 @@ def register():
         # redirect to verify otp page
         return redirect('/verify-otp')
 
-@app.route('/verify-otp', methods=['GET', 'POST'])
+@app.route('/verify-otp', methods=['GET','POST'])
 def verifyotp():
-    if request.method == 'GET':
+    if request.method =='GET':
         return render_template('verifyotp.html')
-
-    if request.method == 'POST':
+    if request.method == "POST":
         otp = int(request.form.get('otp'))
-
-        if otp != session['otp']:
+        # match otp
+        if otp!= session['otp']:
             print("OTP Incorrect")
-            return redirect('/verify-otp')
-
-        hash_password = generateHashPassword(
-            password=session['password']
-        )
-
-        status, msg = AuthQueries.insertUserRecord(
-            username=session['username'],
-            email=session['email'],
-            hash_password=hash_password
-        )
-
+            return redirect('/vefiry-otp')
+        hash_password = generateHashPassword(password=session['password'])
+        status, msg = AuthQueries.insertUserRecord(username=session['username'],
+                                                   email=session['email'],
+                                                   hash_password= hash_password)
         if status == False:
             print(msg)
             return redirect('/')
-
         print(msg)
         return redirect('/login')
 
+        #store user data in database
 
+    
+# forgot - password
+@app.route('/forgot-password', methods = ['GET','POST'])
+def forgot_password():
+    if request.method =='GET':
+        return render_template('forgot_password.html')
+    if request.method == 'POST':
+        email = request.form.get('email')
+        # check email exists
+        status, msg = AuthQueries.checkEmailExists(email=email)
+        if status == False:
+            print(msg)
+            return redirect(url_for('login'))
+        # generate email token
+        token = generateToken(email=email)
+        # generate reset password link
+        reset_link = url_for('reset_password', token=token, _external = True)
+        # send link via email
+        body = EmailTemaples.forgotPasswordTemplate(url=reset_link)
+        status, msg = sendEmail(to_email=email, 
+                                subject="Reset Password - SNS",
+                                body = body)
+        if status == False:
+            print(msg)
+            return redirect(url_for('forgot_password'))
+        print(msg)
+        # redirect to login page
+        return redirect(url_for('login'))
+
+
+
+# reset password 
+@app.route('/reset-password/<token>', methods = ['GET','POST'])
+def reset_password(token):
+    # validate token
+    email = validateToken(token=token)
+    if request.method =='GET':
+        return render_template('reset_password.html', token_val = token)
+    if request.method == 'POST':
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+        # match NP and CP
+        if new_password != confirm_password:
+            print("Password miss match")
+            return redirect(url_for('reset_password', token = token))
+        # generate hash password
+        hash_password = generateHashPassword(password=new_password)
+        # update hash password in database by using email
+        status, msg = AuthQueries.updatePassword(email=email,
+                                                 hash_password=hash_password)
+        print(msg)
+        return f"<h2>{msg}</h2>"
+        # return msg like "Password Updates successfully"        
+
+
+
+# dashboard 
+@app.route("/dashboard")
+def dashboard():
+    return render_template('dashboard.html', username = session['username'])
+
+
+# =======================================================================================================================================================
+
+#                                                           NOTES ROUTES
+#===================================================================================================================================================================
+
+
+@app.route("/dashboard/notes")
+def mynotes():
+    return render_template('notes.html')
+
+
+
+@app.route("/dashboard/notes/new-notes", methods=["GET", "POST"])
+def new_notes():
+    if request.method == "GET":
+        return render_template("new_notes.html")
+    if request.method == "POST":
+        title = request.form.get('title')
+        content = request.form.get('content')
+        userid = session['id']
+        #stored notes in database
+        
+
+#main 
 if __name__ == "__main__":
     print(createTables())
     app.run(debug=True)

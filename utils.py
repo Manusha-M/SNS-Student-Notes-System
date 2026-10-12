@@ -9,7 +9,7 @@ load_dotenv()
 
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
-SENDER_EMAIL = os.getenv('sender_email')
+SENDER_EMAIL = "manushamanne@gmail.com" #os.getenv('sender_email')
 SENDER_PASSKEY = os.getenv('passkey')
 
 def sendEmail(to_email:str, subject:str, body:str):
@@ -37,47 +37,6 @@ def sendEmail(to_email:str, subject:str, body:str):
     except Exception as e:
         return False, f"Something wrong in utils.py-sendEmail():{e}"
 
-# def sendEmail(to_email: str, subject: str, body: str):
-
-#     msg = MIMEMultipart()
-#     msg["From"] = SENDER_EMAIL
-#     msg["To"] = to_email
-#     msg["Subject"] = subject
-#     msg.attach(MIMEText(body, "plain"))
-
-#     try:
-#         print("1. Creating SMTP connection")
-
-#         server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=30)
-
-#         print("2. SMTP connected")
-
-#         server.ehlo()
-#         print("3. EHLO successful")
-
-#         server.starttls()
-#         print("4. STARTTLS successful")
-
-#         server.ehlo()
-#         print("5. EHLO after TLS successful")
-
-#         server.login(SENDER_EMAIL, SENDER_PASSKEY)
-#         print("6. Login successful")
-
-#         server.sendmail(
-#             SENDER_EMAIL,
-#             to_email,
-#             msg.as_string()
-#         )
-#         print("7. Email sent")
-
-#         server.quit()
-
-#         return True, "Email sent to Registered Mail"
-
-#     except Exception as e:
-#         print("ERROR:", e)
-#         return False, f"Something wrong in utils.py-sendEmail(): {e}"
 
 
 
@@ -116,4 +75,20 @@ class EmailTemaples:
         
         Best whises,
         SNS Managment"""
+        return template
+
+    # forgot password template
+    @staticmethod
+    def forgotPasswordTemplate(url:str, username:str="User"):
+        template = f"""Hello {username},
+        To manage your files and notes, first reset password and login with 
+        new password.
+        
+        Your Reset password link: {url}
+            
+        If it is not done by you simple ignore this email.
+        Thanks for choosing sns app.
+        
+        Regards
+        SNS Management"""
         return template

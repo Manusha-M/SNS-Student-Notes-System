@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, session, url_for
 
-from database import createTables, AuthQueries
+from database import createTables, AuthQueries, NotesQueries
 import random
 from utils import EmailTemaples, sendEmail
 from utils import generateHashPassword,validateHashPassword
@@ -52,6 +52,7 @@ def login():
         email = request.form.get('email')
         password = request.form.get('password')
         status, user = AuthQueries.checkEmailExists(email=email, data=True)
+        # print(user)
         if status == False:
             print(user)
             return redirect('/login')
@@ -63,7 +64,7 @@ def login():
             return redirect('/login')
         # redicte to dash board page
         session.clear()
-        session['id'] = user ['userid']
+        session['id'] = user['userid']
         session['username'] = user['username']
         return redirect('/dashboard')
 
@@ -190,40 +191,58 @@ def reset_password(token):
                                                  hash_password=hash_password)
         print(msg)
         return f"<h2>{msg}</h2>"
-        # return msg like "Password Updates successfully"        
+        # return msg like "Password Updates successfully"
+        
+
+
+
+
+
 
 
 
 # dashboard 
 @app.route("/dashboard")
 def dashboard():
-    return render_template('dashboard.html', username = session['username'])
+    return render_template('dashboard.html', 
+                           username = session['username'])
 
-
-# =======================================================================================================================================================
-
-#                                                           NOTES ROUTES
-#===================================================================================================================================================================
-
-
-@app.route("/dashboard/notes")
+# =============================================================================
+#                               Notes Routes
+# =============================================================================
+@app.route('/dashboard/notes')
 def mynotes():
-    return render_template('notes.html')
+    userid = session['id']
+    status, all_notes = NotesQueries.getAllNotes(userid=userid)
+    return render_template('notes.html', notes = all_notes)
 
-
-
-@app.route("/dashboard/notes/new-notes", methods=["GET", "POST"])
+# new notes
+@app.route('/dashboard/notes/new-notes', methods=['GET','POST'])
 def new_notes():
-    if request.method == "GET":
-        return render_template("new_notes.html")
-    if request.method == "POST":
+    if request.method == 'GET':
+        return render_template('new_notes.html')
+    if request.method == 'POST':
         title = request.form.get('title')
         content = request.form.get('content')
         userid = session['id']
-        #stored notes in database
-        
+        # stored notes in  database
+        status, msg = NotesQueries.insertNotesRecord(userid=userid,
+                                                    title=title, 
+                                                    content=content)
+        print(msg)
+        return redirect(url_for('mynotes'))
 
-#main 
+# view notes
+@app.route('/dashboard/notes/view/<int:id>')
+def view_notes(id):
+    # get notes by notes id
+    status, note = NotesQueries.getAllNotes(userid=session['id'], 
+                                            notesid=id)
+    return render_template('view_notes.html', 
+                           title=note['title'], 
+                           content = note['content'])
+
+#main
 if __name__ == "__main__":
     print(createTables())
     app.run(debug=True)

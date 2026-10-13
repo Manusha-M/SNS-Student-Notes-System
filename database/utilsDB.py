@@ -58,33 +58,47 @@ class AuthQueries:
 
         except Exception as e:
             return False, f"Something wrong in \
-        database/utilsDB.py-AuthQueries.updatePassword():{e}"
+        database/utilsDB.py-NotesQueries.updatePassword():{e}"
 
 
-#notes query
+# notes queries
 class NotesQueries:
-
     @staticmethod
-    def insertNotesRecord(userid: int, title: str, content: str):
+    def insertNotesRecord(userid:int, title:str, content:str):
         try:
             db_config = DatabaseConnection()
             cursor = db_config.cursor()
-
-            query = """
-                INSERT INTO notes (userid, title, content)
-                VALUES (%s, %s, %s)
-            """
-
+            query = """insert into notes(userid, title, content) values(%s, %s, %s)"""
             cursor.execute(query, (userid, title, content))
             db_config.commit()
-
-            cursor.close()
             db_config.close()
-
-            return True, "Notes added successfully"
+            cursor.close()
+            return True, "Notes saved successfully"
 
         except Exception as e:
-            return False, f"Something wrong in database/utilsDB.py-NotesQueries.insertNotesRecord(): {e}"
+            return False, f"Something wrong in \
+        database/utilsDB.py-NotesQueries.insertNotesRecord():{e}"
 
+# get all notes
+    @staticmethod
+    def getAllNotes(userid:int, notesid:int=None):
+        try:
+            db_config = DatabaseConnection()
+            cursor = db_config.cursor(dictionary=True)
+            query = """select * from notes where userid = %s"""
+            values = [userid]
+            if notesid:
+                query += " and notesid = %s"
+                values.append(notesid)
+                cursor.execute(query, tuple(values))
+                notes = cursor.fetchone()
+            else:
+                cursor.execute(query, (userid,))
+                notes = cursor.fetchall()
+            db_config.close()
+            cursor.close()
+            return True, notes
 
-
+        except Exception as e:
+            return False, f"Something wrong in \
+        database/utilsDB.py-NotesQueries.getAllNotes():{e}"

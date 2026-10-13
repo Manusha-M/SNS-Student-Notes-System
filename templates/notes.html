@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 
-    {% block title %}
-        Notes
-    {% endblock %}
 
+{% block title %}
+    Notes
+{% endblock %}
 
 {% block navmenu %}
     <a href="/dashboard">Home</a>
@@ -18,19 +18,39 @@
         <div>
             <h2>SNS Notes</h2>
         </div>
-        <div>
-           
-            <p>Here you can manage youre notes start by creating first notes</p>
+        <div>            
+            <p>Here you can mange your notes start by creating first notes</p>
         </div>
         <div>
-                <button><a href="{{ url_for('addNotes') }}">New Notes</a></button>  
+            <button><a href="{{ url_for('new_notes') }}">New Notes</a></button>   
         </div>
         <div>
             {% if notes %}
-            <p></p>
+                {% for note in notes %}
+                    <div>
+                        <div>
+                            <strong>Title:</strong>
+                            {{ note.title }}
+                        </div>
+                        <div>
+                            <strong>Content:</strong>
+                            {% if note.content|length > 100 %}
+                                {{ note.content[:100]+"...." }}
+                            {% else %}
+                                {{ note.content }}
+                            {% endif %}
+
+                        </div>
+                        <div>
+                            <button><a href="/dashboard/notes/view/{{ note.notesid }}">View</a></button>
+                            <button><a href="#">Edit</a></button>
+                            <button><a href="#">Delete</a></button>
+                        </div>
+                    </div>
+                {% endfor %}
             {% else %}
-            <p><i>Start creating your first note by click on New Notes</i></p>
-            {% endif %}           
+                <p><i>Start creating your first note by click on New Notes</i></p>
+            {% endif %}
         </div>
     </div>
 {% endblock %}
